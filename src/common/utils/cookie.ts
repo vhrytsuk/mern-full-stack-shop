@@ -17,7 +17,7 @@ const defaults = {
 };
 
 export const getRefreshTokenCookieOptions = (): CookieOptions => {
-  const expiresIn = env.JWT_REFRESH_TTL_DAYS;
+  const expiresIn = env.JWT_REFRESH_TTL;
   const expires = calculateExpirationDate(`${expiresIn}d`);
 
   return {
@@ -28,7 +28,7 @@ export const getRefreshTokenCookieOptions = (): CookieOptions => {
 };
 
 export const getAccessTokenCookieOptions = (): CookieOptions => {
-  const expiresIn = env.JWT_ACCESS_TTL_MIN;
+  const expiresIn = env.JWT_ACCESS_TTL;
 
   const expires = calculateExpirationDate(`${expiresIn}m`);
 

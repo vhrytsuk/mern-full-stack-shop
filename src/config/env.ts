@@ -11,12 +11,13 @@ const EnvSchema = z.object({
 
   JWT_ACCESS_SECRET: z.string().min(16),
   JWT_REFRESH_SECRET: z.string().min(16),
-  JWT_ACCESS_TTL_MIN: z.coerce.number().default(15),
-  JWT_REFRESH_TTL_DAYS: z.coerce.number().default(30),
+  JWT_ACCESS_TTL: z.coerce.number().default(15),
+  JWT_REFRESH_TTL: z.coerce.number().default(30),
 
   COOKIE_SECURE: z.coerce.boolean().default(false),
 
   CORS_ORIGIN: z.string().default("http://localhost:3000"),
+  RESEND_API_KEY: z.string().min(1),
   MAILER_SENDER: z.email(),
 });
 

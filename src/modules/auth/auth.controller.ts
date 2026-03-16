@@ -5,8 +5,14 @@ import { asyncHandler } from "../../middleware/asyncHandler";
 import {
   loginSchema,
   registerSchema,
+  verificationEmailSchema,
 } from "../../common/validators/auth.validator";
-import { setAuthenticationCookies } from "../../common/utils/cookie";
+import {
+  getAccessTokenCookieOptions,
+  getRefreshTokenCookieOptions,
+  setAuthenticationCookies,
+} from "../../common/utils/cookie";
+import { UnauthorizedException } from "../../common/utils/catch-errors";
 
 export class AuthController {
   private authService: AuthService;
@@ -60,6 +66,46 @@ export class AuthController {
             mfaRequired,
           },
         });
+    }
+  );
+
+  public refreshToken = asyncHandler(
+    async (req: Request, res: Response): Promise<any> => {
+      const { refreshToken } = req.cookies;
+
+      if (!refreshToken) {
+        throw new UnauthorizedException("Refresh token is missing");
+      }
+
+      const { accessToken, newRefreshToken } =
+        await this.authService.refreshToken(refreshToken);
+
+      if (newRefreshToken) {
+        res.cookie(
+          "refreshToken",
+          newRefreshToken,
+          getRefreshTokenCookieOptions()
+        );
+      }
+
+      return res
+        .status(HTTPSTATUS.OK)
+        .cookie("accessToken", accessToken, getAccessTokenCookieOptions())
+        .json({
+          message: "Access token refreshed successfully",
+        });
+    }
+  );
+
+  public verifyEmail = asyncHandler(
+    async (req: Request, res: Response): Promise<any> => {
+      const { code } = verificationEmailSchema.parse(req.body);
+
+      await this.authService.verifyEmail(code);
+
+      return res.status(HTTPSTATUS.OK).json({
+        message: "Email verified successfully",
+      });
     }
   );
 }
