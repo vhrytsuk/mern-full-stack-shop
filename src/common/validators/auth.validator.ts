@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const emailSchema = z.email("Invalid email address");
+export const emailSchema = z.email("Invalid email address");
 const passwordSchema = z
   .string()
   .min(8, "Password must be at least 6 characters long")
@@ -34,6 +34,6 @@ export const verificationEmailSchema = z.object({
 });
 
 export const resetPasswordSchema = z.object({
-  passwordSchema: passwordSchema,
-  verificationCodeSchema: verificationCodeSchema,
+  password: passwordSchema,
+  verificationCode: verificationCodeSchema,
 });

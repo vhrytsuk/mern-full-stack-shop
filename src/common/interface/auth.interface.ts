@@ -10,3 +10,8 @@ export interface LoginData {
   password: string;
   userAgent: string | undefined;
 }
+
+export interface ResetPasswordData {
+  password: string;
+  verificationCode: string;
+}

@@ -19,6 +19,7 @@ const EnvSchema = z.object({
   CORS_ORIGIN: z.string().default("http://localhost:3000"),
   RESEND_API_KEY: z.string().min(1),
   MAILER_SENDER: z.email(),
+  MAILER_TEST_RECEIVER: z.email(),
 });
 
 export const env = EnvSchema.parse(process.env);

@@ -1,14 +1,23 @@
 import { ErrorCode } from "../../common/enums/error-code.enum";
 import { VerificationEnum } from "../../common/enums/verification-code.enum";
-import { LoginData, RegisterData } from "../../common/interface/auth.interface";
+import {
+  LoginData,
+  RegisterData,
+  ResetPasswordData,
+} from "../../common/interface/auth.interface";
 import {
   BadRequestException,
+  HttpException,
+  InternalServerException,
+  NotFoundException,
   UnauthorizedException,
 } from "../../common/utils/catch-errors";
 import {
+  anHourFromNow,
   calculateExpirationDate,
   fortyFiveMinutesFromNow,
   ONE_DAY_IN_MS,
+  threeMinutesAgo,
 } from "../../common/utils/date-time";
 import SessionModel from "../../database/models/session.model";
 import UserModel from "../../database/models/user.model";
@@ -20,6 +29,14 @@ import {
   verifyJwtToken,
 } from "../../common/utils/jwt";
 import { env } from "../../config/env";
+import {
+  passwordResetTemplate,
+  verifyEmailTemplate,
+} from "../../mailers/templates/template";
+import { sendEmail } from "../../mailers/mailer";
+import { HTTPSTATUS } from "../../config/http.config";
+import { emailReceiver } from "../../common/utils/emailReceiver";
+import { hashValue } from "../../common/utils/bcrypt";
 
 export class AuthService {
   public async register(data: RegisterData) {
@@ -46,6 +63,13 @@ export class AuthService {
       userId,
       type: VerificationEnum.EMAIL_VERIFICATION,
       expiresAt: fortyFiveMinutesFromNow(),
+    });
+
+    const verificationUrl = `${env.CORS_ORIGIN}/confirm-account?code=${verificationCode.code}`;
+
+    await sendEmail({
+      to: emailReceiver(email),
+      ...verifyEmailTemplate(verificationUrl),
     });
 
     return {
@@ -176,6 +200,94 @@ export class AuthService {
 
     return {
       user: updateUser,
+    };
+  }
+
+  public async forgotPassword(email: string) {
+    const user = await UserModel.findOne({ email });
+
+    if (!user) {
+      throw new BadRequestException(
+        "User not found with this email",
+        ErrorCode.AUTH_USER_NOT_FOUND
+      );
+    }
+
+    const timeAgo = threeMinutesAgo();
+    const maxAttempts = 3;
+
+    const count = await VerificationCodeModel.countDocuments({
+      userId: user._id,
+      type: VerificationEnum.PASSWORD_RESET,
+      createdAt: { $gt: timeAgo },
+    });
+
+    if (count >= maxAttempts) {
+      throw new HttpException(
+        "Too many request, try again later",
+        HTTPSTATUS.TOO_MANY_REQUESTS,
+        ErrorCode.AUTH_TOO_MANY_ATTEMPTS
+      );
+    }
+
+    const expiresAt = anHourFromNow();
+    const validCode = await VerificationCodeModel.create({
+      userId: user._id,
+      type: VerificationEnum.PASSWORD_RESET,
+      expiresAt,
+    });
+
+    const resetLink = `${env.CORS_ORIGIN}/reset-password?code=${
+      validCode.code
+    }&exp=${expiresAt.getTime()}`;
+
+    const { data, error } = await sendEmail({
+      to: emailReceiver(email),
+      ...passwordResetTemplate(resetLink),
+    });
+
+    if (!data?.id) {
+      throw new InternalServerException(`${error?.name} ${error?.message}`);
+    }
+
+    return {
+      url: resetLink,
+      emailId: data.id,
+    };
+  }
+
+  public async resetPassword({
+    password,
+    verificationCode,
+  }: ResetPasswordData) {
+    const validCode = await VerificationCodeModel.findOne({
+      code: verificationCode,
+      type: VerificationEnum.PASSWORD_RESET,
+      expiresAt: { $gt: new Date() },
+    });
+
+    if (!validCode) {
+      throw new NotFoundException("Invalid or expired verification code");
+    }
+
+    const hashedPassword = await hashValue(password);
+
+    const updatedUser = await UserModel.findByIdAndUpdate(validCode.userId, {
+      password: hashedPassword,
+    });
+
+    if (!updatedUser) {
+      throw new BadRequestException("Failed to reset password!");
+    }
+
+    await validCode.deleteOne();
+
+    await SessionModel.deleteMany({
+      userId: updatedUser._id,
+    });
+
+    return {
+      user: updatedUser,
     };
   }
 }
