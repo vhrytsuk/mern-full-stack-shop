@@ -1,4 +1,4 @@
-# MERN Full Stack Shop API
+# Express API
 
 This repository currently contains the backend API for a shop application. The codebase is focused on authentication, session management, email verification, password recovery, and multi-factor authentication rather than product or checkout features.
 
