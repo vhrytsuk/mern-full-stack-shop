@@ -57,6 +57,16 @@ export class AuthController {
       const { user, accessToken, refreshToken, mfaRequired } =
         await this.authService.login(payload);
 
+      if (mfaRequired) {
+        return res.status(HTTPSTATUS.OK).json({
+          message: "MFA is required for this account",
+          data: {
+            user,
+            mfaRequired,
+          },
+        });
+      }
+
       return setAuthenticationCookies({
         res,
         accessToken,
@@ -133,6 +143,22 @@ export class AuthController {
 
       return clearAuthenticationCookies(res).status(HTTPSTATUS.OK).json({
         message: "Password reset successfully",
+      });
+    }
+  );
+
+  public logout = asyncHandler(
+    async (req: Request, res: Response): Promise<any> => {
+      const sessionId = req.sessionId;
+
+      if (!sessionId) {
+        throw new UnauthorizedException("Session ID is missing");
+      }
+
+      await this.authService.logout(sessionId);
+
+      return clearAuthenticationCookies(res).status(HTTPSTATUS.OK).json({
+        message: "User logged out successfully",
       });
     }
   );

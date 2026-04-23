@@ -11,6 +11,7 @@ interface UserPreferences {
 }
 
 export interface UserDocument extends Document {
+  id: string;
   name: string;
   email: string;
   password: string;
@@ -26,7 +27,7 @@ const UserPreferencesSchema = new Schema<UserPreferences>({
   emailNotification: { type: Boolean, default: true },
   twoFactorSecret: {
     type: String,
-    default: false,
+    required: false,
   },
 });
 

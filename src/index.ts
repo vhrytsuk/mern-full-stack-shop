@@ -6,10 +6,12 @@ import { env } from "./config/env";
 import connectDB from "./database/database";
 import { errorHandler } from "./middleware/errorHandler";
 import { HTTPSTATUS } from "./config/http.config";
-import { ca, th } from "zod/v4/locales";
 import { asyncHandler } from "./middleware/asyncHandler";
-import { BadRequestException } from "./common/utils/catch-errors";
 import authRouts from "./modules/auth/auth.routs";
+import passport from "./middleware/passport";
+import { authenticateJWT } from "./common/strategies/jwt.strategy";
+import sessionRoutes from "./modules/session/session.routes";
+import mfaRoutes from "./modules/mfa/mfa.routes";
 
 const app = express();
 const BASE_PATH = env.BASE_PATH;
@@ -23,6 +25,7 @@ app.use(
   })
 );
 app.use(cookiesParser());
+app.use(passport.initialize());
 
 app.get(
   "/",
@@ -34,6 +37,8 @@ app.get(
 );
 
 app.use(`${BASE_PATH}/auth`, authRouts);
+app.use(`${BASE_PATH}/mfa`, mfaRoutes);
+app.use(`${BASE_PATH}/session`, authenticateJWT, sessionRoutes);
 
 app.use(errorHandler);
 

@@ -98,6 +98,15 @@ export class AuthService {
       );
     }
 
+    if (user.userPreferences?.enable2FA) {
+      return {
+        user: null,
+        mfaRequired: true,
+        accessToken: "",
+        refreshToken: "",
+      };
+    }
+
     const session = await SessionModel.create({
       userId: user._id,
       userAgent: userAgent || "Unknown",
@@ -289,5 +298,9 @@ export class AuthService {
     return {
       user: updatedUser,
     };
+  }
+
+  public async logout(sessionId: string) {
+    return await SessionModel.findByIdAndDelete(sessionId);
   }
 }
